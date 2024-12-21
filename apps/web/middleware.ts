@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { auth } from "./auth";
 
-console.log('Middleware executed');
+export async function middleware(request: NextRequest) {
+  const pathname = new URL(request.url).pathname;
 
-export function middleware(request: NextRequest) {
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next(); // /api/*は認証をスキップ
+  }
+
   const basicAuth = request.headers.get('authorization');
   
-  // ベーシック認証のユーザー名とパスワード
   const username = 'usr';
   const password = 'pwd';
   const authString = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
@@ -18,6 +22,13 @@ export function middleware(request: NextRequest) {
         'WWW-Authenticate': 'Basic realm="Secure Area"',
       },
     });
+  }
+
+  if (pathname.startsWith("/admin")) {
+    const session = await auth.auth();
+    if (!session) {
+      return NextResponse.redirect('http://localhost:3001/sign-in');
+    }
   }
 
   return NextResponse.next();
